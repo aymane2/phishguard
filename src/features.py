@@ -30,6 +30,10 @@ def normalize_url(url: str) -> str:
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
         url = "http://" + url
     url = url.split("#", 1)[0]
+    # "http://a.com/" et "http://a.com" désignent la même adresse
+    parsed = urlparse(url)
+    if parsed.path == "/" and not parsed.query and not parsed.params:
+        url = url.rstrip("/")
     return url.lower()
 
 

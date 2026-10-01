@@ -37,3 +37,7 @@ def test_clean_url_has_no_suspicious_signals():
     assert f["num_suspicious_words"] == 0
     assert f["risky_tld"] == 0
     assert f["num_hyphens"] == 0
+
+
+def test_trailing_slash_does_not_change_features():
+    assert extract_features("https://www.google.com/") == extract_features("https://www.google.com")
