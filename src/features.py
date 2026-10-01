@@ -49,7 +49,7 @@ def extract_features(url: str) -> dict:
     host = parsed.hostname or ""
     parts = _extract(url)
 
-    subdomain = parts.subdomain
+    subdomain = re.sub(r"^www\d*(\.|$)", "", parts.subdomain)  # www ne compte pas
     num_subdomains = len(subdomain.split(".")) if subdomain else 0
     digits = sum(ch.isdigit() for ch in url)
 
