@@ -98,3 +98,9 @@ Le split est fait par domaine (aucun domaine commun entre entraînement et test)
 - `models/` : modèle sérialisé (.joblib) et métriques
 - `tests/` : tests pytest
 - `Dockerfile` : image de l'API
+
+## Tout lancer d'une commande (API + interface)
+
+    docker compose up --build
+
+Interface : http://localhost:8501, API : http://localhost:8000/docs
