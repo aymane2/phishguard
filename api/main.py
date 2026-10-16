@@ -8,6 +8,7 @@ import pandas as pd
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field, field_validator
 
+from src.brands import check_brand
 from src.db import history, init_db, save_scan
 from src.features import extract_features, normalize_url
 
@@ -47,6 +48,7 @@ class PredictResponse(BaseModel):
     threshold: float
     features: dict
     model_version: str
+    brand_alert: dict | None = None
 
 
 @app.get("/health")
@@ -70,6 +72,7 @@ def predict(req: PredictRequest):
         threshold=art["threshold"],
         features=feats,
         model_version=art["version"],
+        brand_alert=check_brand(req.url),
     )
 
 

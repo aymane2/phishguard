@@ -55,3 +55,13 @@ def test_history_records_scans(client):
     r = client.get("/history?suspicious_only=true")
     assert r.status_code == 200
     assert any("paypal-secure-login" in scan["url"] for scan in r.json())
+
+
+def test_brand_alert_in_api(client):
+    r = client.post(
+        "/predict",
+        json={"url": "http://paypal-secure-login.verify-account.xyz/signin"},
+    )
+    assert r.json()["brand_alert"]["brand"] == "paypal"
+    r = client.post("/predict", json={"url": "https://www.google.com"})
+    assert r.json()["brand_alert"] is None

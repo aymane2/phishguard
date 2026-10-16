@@ -44,6 +44,10 @@ def show_analysis():
         st.write(f"Probabilité de phishing : **{p:.0%}** (seuil de décision : {data['threshold']})")
         st.progress(min(max(p, 0.0), 1.0))
 
+        alert = data.get("brand_alert")
+        if alert:
+            st.warning(f"🎭 Usurpation de marque possible : {alert['message']}")
+
         st.subheader("Caractéristiques extraites")
         feats = pd.DataFrame(
             {"caractéristique": list(data["features"].keys()),
