@@ -12,7 +12,7 @@ COPY api/ api/
 COPY models/model.joblib models/model.joblib
 
 # Utilisateur non-root
-RUN useradd --create-home appuser
+RUN useradd --create-home appuser && mkdir -p /app/data && chown appuser /app/data
 USER appuser
 
 EXPOSE 8000
