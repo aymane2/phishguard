@@ -7,7 +7,7 @@ import streamlit as st
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
-st.set_page_config(page_title="PhishGuard", page_icon="🛡️")
+st.set_page_config(page_title="PhishGuard", page_icon="🛡️", layout="wide")
 st.title("🛡️ PhishGuard")
 st.caption("Détection de phishing par analyse d'URL (sans ouvrir la page)")
 
@@ -76,6 +76,13 @@ def show_history():
     df = pd.DataFrame(rows)
     df["probability"] = (df["probability"] * 100).round(1).astype(str) + " %"
     st.caption(f"{len(df)} analyse(s) affichée(s)")
+    df = df.rename(columns={
+        "id": "N°", "url": "URL", "domain": "Domaine", "prediction": "Verdict",
+        "probability": "Probabilité", "status": "Statut", "created_at": "Date (UTC)",
+    })
+    df["Verdict"] = df["Verdict"].replace(
+        {"phishing": "⚠️ phishing", "legitimate": "✅ légitime"})
+    df["Statut"] = df["Statut"].replace({"predicted": "prédit"})
     st.dataframe(df, width="stretch", hide_index=True)
 
 
