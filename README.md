@@ -75,10 +75,10 @@ La même chaîne s'exécute automatiquement à chaque push (GitHub Actions).
 
 | Métrique | Résultat | Minimal visé |
 |---|---|---|
-| Précision | 0,966 | 0,90 |
+| Précision | 0,959 | 0,90 |
 | Rappel | 0,901 | 0,90 |
-| Taux de faux positifs | 0,043 | 0,07 |
-| AUC-ROC | 0,972 | 0,95 |
+| Taux de faux positifs | 0,051 | 0,07 |
+| AUC-ROC | 0,968 | 0,95 |
 
 Le split est fait par domaine (aucun domaine commun entre entraînement et test) ; le seuil est choisi par validation croisée sur l'entraînement uniquement.
 
