@@ -45,3 +45,13 @@ def test_invalid_url_returns_422(client):
 def test_missing_url_returns_422(client):
     r = client.post("/predict", json={})
     assert r.status_code == 422
+
+
+def test_history_records_scans(client):
+    client.post(
+        "/predict",
+        json={"url": "http://paypal-secure-login.verify-account.xyz/signin"},
+    )
+    r = client.get("/history?suspicious_only=true")
+    assert r.status_code == 200
+    assert any("paypal-secure-login" in scan["url"] for scan in r.json())
