@@ -36,8 +36,11 @@ def show_analysis():
         data = r.json()
         p = data["phishing_probability"]
 
-        if data["prediction"] == "phishing":
+        level = data.get("risk_level", "low")
+        if level == "high":
             st.error(f"⚠️ PHISHING détecté (confiance {data['confidence']:.0%})")
+        elif level == "medium":
+            st.warning("🟠 À vérifier : le modèle hésite ou un indice suspect a été relevé.")
         else:
             st.success(f"✅ URL légitime (confiance {data['confidence']:.0%})")
 

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 from src.brands import check_brand
 from src.db import history, init_db, save_scan
 from src.features import extract_features, normalize_url
+from src.risk import risk_level
 
 MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "model.joblib"
 state: dict = {}
@@ -49,6 +50,7 @@ class PredictResponse(BaseModel):
     features: dict
     model_version: str
     brand_alert: dict | None = None
+    risk_level: str = "low"
 
 
 @app.get("/health")
@@ -65,6 +67,7 @@ def predict(req: PredictRequest):
     is_phish = p_phish >= art["threshold"]
     save_scan(req.url, p_phish, "phishing" if is_phish else "legitimate",
               art["version"], feats)
+    brand = check_brand(req.url)
     return PredictResponse(
         prediction="phishing" if is_phish else "legitimate",
         confidence=round(p_phish if is_phish else 1 - p_phish, 4),
@@ -72,7 +75,8 @@ def predict(req: PredictRequest):
         threshold=art["threshold"],
         features=feats,
         model_version=art["version"],
-        brand_alert=check_brand(req.url),
+        brand_alert=brand,
+        risk_level=risk_level(p_phish, art["threshold"], brand),
     )
 
 

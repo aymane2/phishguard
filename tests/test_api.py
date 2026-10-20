@@ -65,3 +65,13 @@ def test_brand_alert_in_api(client):
     assert r.json()["brand_alert"]["brand"] == "paypal"
     r = client.post("/predict", json={"url": "https://www.google.com"})
     assert r.json()["brand_alert"] is None
+
+
+def test_risk_level_in_api(client):
+    r = client.post(
+        "/predict",
+        json={"url": "http://paypal-secure-login.verify-account.xyz/signin"},
+    )
+    assert r.json()["risk_level"] == "high"
+    r = client.post("/predict", json={"url": "https://www.google.com"})
+    assert r.json()["risk_level"] == "low"
