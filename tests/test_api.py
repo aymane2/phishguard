@@ -75,3 +75,9 @@ def test_risk_level_in_api(client):
     assert r.json()["risk_level"] == "high"
     r = client.post("/predict", json={"url": "https://www.google.com"})
     assert r.json()["risk_level"] == "low"
+
+
+def test_ssl_check_refuses_internal_address(client):
+    r = client.post("/ssl-check", json={"url": "http://192.168.1.15/bank/login.php"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "blocked"

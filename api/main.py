@@ -12,6 +12,7 @@ from src.brands import check_brand
 from src.db import history, init_db, save_scan
 from src.features import extract_features, normalize_url
 from src.risk import risk_level
+from src.ssl_check import check_certificate
 
 MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "model.joblib"
 state: dict = {}
@@ -88,3 +89,9 @@ def get_history(
 ):
     """Dernières analyses enregistrées (option : seulement les sites suspects)."""
     return history(limit=limit, suspicious_only=suspicious_only)
+
+
+@app.post("/ssl-check")
+def ssl_check(req: PredictRequest):
+    """Analyse du certificat SSL du site (appel séparé : peut durer quelques secondes)."""
+    return check_certificate(req.url)
