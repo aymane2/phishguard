@@ -41,25 +41,31 @@ def init_db() -> None:
             """
         )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_scans_domain ON scans(domain)")
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(scans)")]
+        if "risk_level" not in cols:
+            conn.execute("ALTER TABLE scans ADD COLUMN risk_level TEXT")
 
 
-def save_scan(url, probability, prediction, model_version, features) -> int:
+def save_scan(url, probability, prediction, model_version, features,
+              risk_level=None) -> int:
     domain = _extract(url).top_domain_under_public_suffix
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with closing(_connect()) as conn, conn:
         cur = conn.execute(
             "INSERT INTO scans (url, domain, prediction, probability,"
-            " model_version, features, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            " model_version, features, risk_level, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (url, domain, prediction, probability, model_version,
-             json.dumps(features), now),
+             json.dumps(features), risk_level, now),
         )
         return cur.lastrowid
 
 
 def history(limit: int = 50, suspicious_only: bool = False) -> list[dict]:
-    query = "SELECT id, url, domain, prediction, probability, status, created_at FROM scans"
+    query = ("SELECT id, url, domain, prediction, probability, risk_level,"
+             " status, created_at FROM scans")
     if suspicious_only:
-        query += " WHERE prediction = 'phishing'"
+        query += " WHERE prediction = 'phishing' OR risk_level = 'medium'"
     query += " ORDER BY id DESC LIMIT ?"
     with closing(_connect()) as conn:
         return [dict(r) for r in conn.execute(query, (limit,)).fetchall()]

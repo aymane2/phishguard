@@ -65,9 +65,10 @@ def predict(req: PredictRequest):
     X = pd.DataFrame([feats])[art["features"]]
     p_phish = float(art["model"].predict_proba(X)[0, 1])
     is_phish = p_phish >= art["threshold"]
-    save_scan(req.url, p_phish, "phishing" if is_phish else "legitimate",
-              art["version"], feats)
     brand = check_brand(req.url)
+    level = risk_level(p_phish, art["threshold"], brand)
+    save_scan(req.url, p_phish, "phishing" if is_phish else "legitimate",
+              art["version"], feats, level)
     return PredictResponse(
         prediction="phishing" if is_phish else "legitimate",
         confidence=round(p_phish if is_phish else 1 - p_phish, 4),
@@ -76,7 +77,7 @@ def predict(req: PredictRequest):
         features=feats,
         model_version=art["version"],
         brand_alert=brand,
-        risk_level=risk_level(p_phish, art["threshold"], brand),
+        risk_level=level,
     )
 
 

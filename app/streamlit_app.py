@@ -87,8 +87,11 @@ def show_history():
         "id": "N°", "url": "URL", "domain": "Domaine", "prediction": "Verdict",
         "probability": "Probabilité", "status": "Statut", "created_at": "Date (UTC)",
     })
-    df["Verdict"] = df["Verdict"].replace(
+    labels = {"high": "⚠️ phishing", "medium": "🟠 à vérifier", "low": "✅ légitime"}
+    fallback = df["Verdict"].replace(
         {"phishing": "⚠️ phishing", "legitimate": "✅ légitime"})
+    df["Verdict"] = df["risk_level"].map(labels).fillna(fallback)
+    df = df.drop(columns=["risk_level"])
     df["Statut"] = df["Statut"].replace({"predicted": "prédit"})
     st.dataframe(df, width="stretch", hide_index=True)
 
