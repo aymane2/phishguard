@@ -1,14 +1,19 @@
 """API REST PhishGuard : /predict et /health (F-06, F-08, F-10, F-11)."""
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field, field_validator
 
+from src.brands import check_brand
+from src.db import history, init_db, save_scan
 from src.features import extract_features, normalize_url
+from src.risk import risk_level
+from src.ssl_check import check_certificate
 
 MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "model.joblib"
 state: dict = {}
@@ -18,6 +23,7 @@ state: dict = {}
 async def lifespan(app: FastAPI):
     # Le modèle est chargé une seule fois, au démarrage
     state["artifact"] = joblib.load(MODEL_PATH)
+    init_db()
     yield
     state.clear()
 
@@ -45,6 +51,16 @@ class PredictResponse(BaseModel):
     threshold: float
     features: dict
     model_version: str
+    brand_alert: dict | None = None
+    risk_level: str = "low"
+    ssl_info: dict | None = None
+
+
+def _ssl_info(url: str) -> dict | None:
+    """Certificat SSL du site (désactivable : PHISHGUARD_SSL_CHECK=0)."""
+    if os.getenv("PHISHGUARD_SSL_CHECK", "1") == "0":
+        return None
+    return check_certificate(url, timeout=3.0)
 
 
 @app.get("/health")
@@ -59,6 +75,11 @@ def predict(req: PredictRequest):
     X = pd.DataFrame([feats])[art["features"]]
     p_phish = float(art["model"].predict_proba(X)[0, 1])
     is_phish = p_phish >= art["threshold"]
+    brand = check_brand(req.url)
+    cert = _ssl_info(req.url)
+    level = risk_level(p_phish, art["threshold"], brand, cert)
+    save_scan(req.url, p_phish, "phishing" if is_phish else "legitimate",
+              art["version"], feats, level)
     return PredictResponse(
         prediction="phishing" if is_phish else "legitimate",
         confidence=round(p_phish if is_phish else 1 - p_phish, 4),
@@ -66,4 +87,16 @@ def predict(req: PredictRequest):
         threshold=art["threshold"],
         features=feats,
         model_version=art["version"],
+        brand_alert=brand,
+        risk_level=level,
+        ssl_info=cert,
     )
+
+
+@app.get("/history")
+def get_history(
+    limit: int = Query(50, ge=1, le=500),
+    suspicious_only: bool = False,
+):
+    """Dernières analyses enregistrées (option : seulement les sites suspects)."""
+    return history(limit=limit, suspicious_only=suspicious_only)
