@@ -77,7 +77,19 @@ def test_risk_level_in_api(client):
     assert r.json()["risk_level"] == "low"
 
 
-def test_ssl_check_refuses_internal_address(client):
-    r = client.post("/ssl-check", json={"url": "http://192.168.1.15/bank/login.php"})
-    assert r.status_code == 200
-    assert r.json()["status"] == "blocked"
+def test_invalid_certificate_makes_verdict_to_check(client, monkeypatch):
+    monkeypatch.setenv("PHISHGUARD_SSL_CHECK", "1")
+    monkeypatch.setattr(
+        "api.main.check_certificate",
+        lambda url, timeout=3.0: {
+            "status": "invalid", "hostname": "x", "reason": "le certificat est expiré",
+        },
+    )
+    r = client.post("/predict", json={"url": "https://www.google.com"})
+    assert r.json()["risk_level"] == "medium"
+    assert r.json()["ssl_info"]["status"] == "invalid"
+
+
+def test_certificate_check_can_be_disabled(client):
+    r = client.post("/predict", json={"url": "https://www.google.com"})
+    assert r.json()["ssl_info"] is None

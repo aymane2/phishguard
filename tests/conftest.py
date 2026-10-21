@@ -5,3 +5,4 @@ import tempfile
 os.environ.setdefault(
     "PHISHGUARD_DB", os.path.join(tempfile.mkdtemp(), "test.db")
 )
+os.environ.setdefault("PHISHGUARD_SSL_CHECK", "0")

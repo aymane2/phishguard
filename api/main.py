@@ -1,4 +1,5 @@
 """API REST PhishGuard : /predict et /health (F-06, F-08, F-10, F-11)."""
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
@@ -52,6 +53,14 @@ class PredictResponse(BaseModel):
     model_version: str
     brand_alert: dict | None = None
     risk_level: str = "low"
+    ssl_info: dict | None = None
+
+
+def _ssl_info(url: str) -> dict | None:
+    """Certificat SSL du site (désactivable : PHISHGUARD_SSL_CHECK=0)."""
+    if os.getenv("PHISHGUARD_SSL_CHECK", "1") == "0":
+        return None
+    return check_certificate(url, timeout=3.0)
 
 
 @app.get("/health")
@@ -67,7 +76,8 @@ def predict(req: PredictRequest):
     p_phish = float(art["model"].predict_proba(X)[0, 1])
     is_phish = p_phish >= art["threshold"]
     brand = check_brand(req.url)
-    level = risk_level(p_phish, art["threshold"], brand)
+    cert = _ssl_info(req.url)
+    level = risk_level(p_phish, art["threshold"], brand, cert)
     save_scan(req.url, p_phish, "phishing" if is_phish else "legitimate",
               art["version"], feats, level)
     return PredictResponse(
@@ -79,6 +89,7 @@ def predict(req: PredictRequest):
         model_version=art["version"],
         brand_alert=brand,
         risk_level=level,
+        ssl_info=cert,
     )
 
 
@@ -89,9 +100,3 @@ def get_history(
 ):
     """Dernières analyses enregistrées (option : seulement les sites suspects)."""
     return history(limit=limit, suspicious_only=suspicious_only)
-
-
-@app.post("/ssl-check")
-def ssl_check(req: PredictRequest):
-    """Analyse du certificat SSL du site (appel séparé : peut durer quelques secondes)."""
-    return check_certificate(req.url)
