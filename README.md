@@ -104,3 +104,18 @@ Le split est fait par domaine (aucun domaine commun entre entraînement et test)
     docker compose up --build
 
 Interface : http://localhost:8501, API : http://localhost:8000/docs
+
+## Version 2
+
+Fonctionnalités ajoutées à la version 1 :
+
+- **Historique** : chaque analyse est enregistrée dans une base SQLite (data/phishguard.db). Page « Historique » dans l'interface et route GET /history. Avec Docker, la base est conservée dans un volume.
+- **Usurpation de marque** : une alerte apparaît si un domaine contient ou imite une marque connue (src/brands.py, une trentaine de marques).
+- **Verdict en 3 niveaux** : vert, orange « à vérifier » et rouge (src/risk.py). L'orange correspond à une probabilité entre 0,30 et 0,45, à une alerte de marque ou à un certificat invalide.
+- **Certificat SSL** : l'API lit le certificat du site pendant l'analyse (src/ssl_check.py). Un certificat invalide (expiré, auto-signé, mauvais domaine) fait passer le verdict au moins en orange ; un certificat valide ne baisse jamais le risque. Les connexions vers les adresses internes sont refusées (protection SSRF).
+
+La vérification du certificat ajoute 1 à 3 secondes à l'analyse. Pour la désactiver :
+
+    PHISHGUARD_SSL_CHECK=0 uvicorn api.main:app
+
+Ces ajouts ne modifient pas le modèle : les métriques ci-dessus sont celles du modèle seul. La suite de tests compte 55 tests.
