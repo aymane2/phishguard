@@ -54,6 +54,10 @@ def random_path() -> str:
 
 
 def build_url(domain: str) -> str:
+    # Modification : On s'assure qu'une part importante (ex: 30%) reste un domaine nu (path vide et pas de sous-domaine superflu)
+    if random.random() < 0.30:
+        return f"https://{domain}"
+
     sub = random.choice(SUBDOMAINS)
     path = random_path()
     return f"https://{sub}{domain}/{path}" if path else f"https://{sub}{domain}"

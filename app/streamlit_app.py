@@ -1,4 +1,4 @@
-"""Interface de démonstration PhishGuard. Aucun ML ici : tout passe par l'API."""
+"""Interface de démonstration PhishGuard. Traduction des caractéristiques en français."""
 import os
 
 import pandas as pd
@@ -12,6 +12,29 @@ st.title("🛡️ PhishGuard")
 st.caption("Détection de phishing par analyse d'URL (sans ouvrir la page)")
 
 page = st.sidebar.radio("Navigation", ["Analyser", "Historique"])
+
+# Dictionnaire de traduction des 19 caractéristiques
+FEATURE_LABELS = {
+    "url_length": "Longueur totale de l'URL",
+    "domain_length": "Longueur du domaine",
+    "path_length": "Longueur du chemin (path)",
+    "num_dots": "Nombre de points (.)",
+    "num_hyphens": "Nombre de tirets (-)",
+    "num_at": "Présence d'arobase (@)",
+    "num_percent": "Nombre de pourcentages (%)",
+    "num_question": "Nombre de points d'interrogation (?)",
+    "num_equal": "Nombre de signes égal (=)",
+    "num_ampersand": "Nombre de perluètes (&)",
+    "num_underscore": "Nombre de tirets bas (_)",
+    "num_digits": "Nombre de chiffres",
+    "digit_ratio": "Ratio de chiffres",
+    "entropy": "Complexité / Aléa du texte (Entropie)",
+    "has_ip": "Utilise une adresse IP directe",
+    "num_subdomains": "Nombre de sous-domaines",
+    "risky_tld": "Extension de domaine à risque (.xyz, .top...)",
+    "is_shortener": "Utilise un raccourcisseur de lien",
+    "num_suspicious_words": "Mots-clés suspects détectés"
+}
 
 
 def show_cert(cert):
@@ -68,10 +91,17 @@ def show_analysis():
         if cert:
             show_cert(cert)
 
-        st.subheader("Caractéristiques extraites")
+        st.subheader("Caractéristiques extraites (Explicabilité)")
+
+        # Application des libellés en français
+        translated_features = {
+            FEATURE_LABELS.get(k, k): v
+            for k, v in data["features"].items()
+        }
+
         feats = pd.DataFrame(
-            {"caractéristique": list(data["features"].keys()),
-             "valeur": list(data["features"].values())}
+            {"Caractéristique": list(translated_features.keys()),
+             "Valeur": list(translated_features.values())}
         )
         st.dataframe(feats, width="stretch", hide_index=True)
         st.caption(f"Version du modèle : {data['model_version']}")

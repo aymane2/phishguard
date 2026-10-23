@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/aymane2/phishguard/actions/workflows/ci.yml/badge.svg)
 
-Détecteur de phishing par analyse d'URL (sans ouvrir la page) : Random Forest, API REST FastAPI, interface Streamlit, Docker, CI GitHub Actions. Projet de validation M1.
+Détecteur de phishing par analyse d'URL (sans ouvrir la page) : Random Forest (300 arbres), API REST FastAPI, interface Streamlit (en français), Docker, CI GitHub Actions. Projet de validation M1.
 
 ## Architecture
 
@@ -69,9 +69,9 @@ Les sources étant mises à jour en continu, les résultats varieront légèreme
     python -m pytest -v
     python -m ruff check .
 
-La même chaîne s'exécute automatiquement à chaque push (GitHub Actions).
+La même chaîne s'exécute automatiquement à chaque push (GitHub Actions) — **55 tests unitaires validés**.
 
-## Résultats (jeu de test, seuil de décision 0,45)
+## Résultats (jeu de test)
 
 | Métrique | Résultat | Minimal visé |
 |---|---|---|
@@ -82,21 +82,19 @@ La même chaîne s'exécute automatiquement à chaque push (GitHub Actions).
 
 Le split est fait par domaine (aucun domaine commun entre entraînement et test) ; le seuil est choisi par validation croisée sur l'entraînement uniquement.
 
-## Limites connues
+## Limites connues & Améliorations récentes
 
-- **Dataset partiellement synthétique** : les URLs légitimes viennent de Tranco (domaines seuls), complétées par des sous-domaines et chemins générés aléatoirement. Le modèle peut apprendre des habitudes de ce générateur : les scores réels seraient probablement plus bas.
-- **Faux positifs sur des URLs légitimes longues** (ex. liens Amazon avec identifiants).
-- **Features lexicales uniquement** : pas de WHOIS/DNS, pas d'analyse du contenu de la page.
-- **Rappel proche du minimum** : à 0,45, le rappel est de 0,901 pour un minimum de 0,90.
-- La feature « HTTPS » est volontairement exclue : toutes les URLs légitimes du jeu de données sont en HTTPS, ce qui créerait un biais.
+- **Domaines nus et faux positifs** : Intégration d'une proportion de domaines nus intacts dans la préparation des données et d'une **liste blanche (`src/allowlist.py`)** combinée à un certificat SSL valide pour éliminer les faux positifs sur les grands sites légitimes (ex. `fundingpips.com`).
+- **Features lexicales uniquement** : pas de WHOIS/DNS, pas d'analyse du contenu de la page (prévu dans les évolutions futures).
+- La feature « HTTPS » est volontairement exclue : toutes les URLs légitimes du jeu de données étant en HTTPS, cela créerait un biais d'apprentissage.
 
 ## Structure
 
 - `api/` : API FastAPI (`/predict`, `/health`)
-- `app/` : interface Streamlit
-- `src/` : extraction de features, préparation des données, entraînement, seuil
+- `app/` : interface Streamlit (entièrement traduite en français avec explicabilité des 19 features)
+- `src/` : extraction de features, préparation des données, liste blanche (`allowlist.py`), calcul du risque (`risk.py`), entraînement, seuil
 - `models/` : modèle sérialisé (.joblib) et métriques
-- `tests/` : tests pytest
+- `tests/` : tests pytest (55 tests)
 - `Dockerfile` : image de l'API
 
 ## Tout lancer d'une commande (API + interface)
@@ -105,17 +103,12 @@ Le split est fait par domaine (aucun domaine commun entre entraînement et test)
 
 Interface : http://localhost:8501, API : http://localhost:8000/docs
 
-## Version 2
+## Fonctionnalités Avancées
 
-Fonctionnalités ajoutées à la version 1 :
-
-- **Historique** : chaque analyse est enregistrée dans une base SQLite (data/phishguard.db). Page « Historique » dans l'interface et route GET /history. Avec Docker, la base est conservée dans un volume.
-- **Usurpation de marque** : une alerte apparaît si un domaine contient ou imite une marque connue (src/brands.py, une trentaine de marques).
-- **Verdict en 3 niveaux** : vert, orange « à vérifier » et rouge (src/risk.py). L'orange correspond à une probabilité entre 0,30 et 0,45, à une alerte de marque ou à un certificat invalide.
-- **Certificat SSL** : l'API lit le certificat du site pendant l'analyse (src/ssl_check.py). Un certificat invalide (expiré, auto-signé, mauvais domaine) fait passer le verdict au moins en orange ; un certificat valide ne baisse jamais le risque. Les connexions vers les adresses internes sont refusées (protection SSRF).
-
-La vérification du certificat ajoute 1 à 3 secondes à l'analyse. Pour la désactiver :
-
-    PHISHGUARD_SSL_CHECK=0 uvicorn api.main:app
-
-Ces ajouts ne modifient pas le modèle : les métriques ci-dessus sont celles du modèle seul. La suite de tests compte 55 tests.
+- **Historique** : chaque analyse est enregistrée dans une base SQLite (`data/phishguard.db`). Page « Historique » dans l'interface et route `GET /history`.
+- **Usurpation de marque** : une alerte apparaît si un domaine contient ou imite une marque connue (`src/brands.py`).
+- **Verdict en 3 niveaux (Sécurité & Risque)** :
+  - 🟢 **Vert (Légitime)** : score faible ou site présent dans la liste blanche avec SSL valide.
+  - 🟠 **Orange (À vérifier)** : probabilité comprise entre 0,35 et 0,65, alerte de marque ou certificat SSL invalide.
+  - 🔴 **Rouge (Phishing)** : probabilité supérieure à 0,65 ou dépassant le seuil strict.
+- **Certificat SSL** : l'API valide le certificat du site en arrière-plan (`src/ssl_check.py`) avec protection contre le SSRF.
